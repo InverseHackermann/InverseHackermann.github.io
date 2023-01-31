@@ -1,0 +1,308 @@
+<!doctype HTML>
+<html>
+  <head>
+    <title>InverseHackermann - Binary Indexed Segment Tree</title>
+    <meta charset="UTF-8" />
+  </head>
+  <body>
+    <div>
+      <a href="index.html">Back to index</a>
+    </div>
+    <h1>
+      Binary Indexed Segment Tree
+    </h1>
+    <h2>
+      &ldquo;Binary Indexed Tree&rdquo; is a bad name for Fenwick trees.
+    </h2>
+    <hr>
+    <p>
+      I'll begin with a rundown of Fenwick trees and segment trees.
+    </p>
+    <h2>Fenwick trees</h2>
+    <p>
+      A Fenwick tree keeps track of prefix sums of an array of size <code>n</code>.
+      You can update an element of this array, and get a prefix sum up to some
+      index, both in O(log(n)) time.
+    </p>
+    <p>
+      The problem with explicitly storing every prefix sum is that any operation
+      to change an index will have to update every prefix sum after this index.
+      So, instead of storing the prefix sums, we will break up each prefix sum
+      into the sum of a bunch of smaller ranges, and we store only the smaller
+      ranges.
+    </p>
+    <p>
+      Traditionally, the way to do this is to break up a prefix sum of length
+      <code>i</code> starting with the biggest range of length
+      <code>2^something</code>, and then break up the remaining range recursively.
+    </p>
+    <pre>
+ 1: |1|
+ 2: | 2 |
+ 3: | 2 |1|
+ 4: |   4   |
+ 5: |   4   |1|
+ 6: |   4   | 2 |
+ 7: |   4   | 2 |1|
+ 8: |       8       |
+ 9: |       8       |1|
+10: |       8       | 2 |
+11: |       8       | 2 |1|
+12: |       8       |   4   |
+   ...
+   i: |          2^something          | smaller prefix sum  |
+    </pre>
+    <p>
+      This makes the actual range sums you have to store look like this:
+    </p>
+    <pre>
+...
+|---------------|               ...
+|-------|       |-------|       ...
+|---|   |---|   |---|   |---|   ...
+|-| |-| |-| |-| |-| |-| |-| |-| ...
+    </pre>
+    <p>
+      We need to store the range sums somewhere, and to avoid pointers, we'll
+      just store them contiguously in an array.
+      The question then becomes, given one of these ranges, what index should it
+      belong to.
+      One neat observation is that when increasing the number of elements in the
+      original array by 1, all of the ranges we need to store remain the same,
+      and only one extra range has to be stored.
+      Therefore, we should always add the extra range to the end of our array,
+      giving rise to this indexing:
+    </p>
+    <pre>
+...
+|----------------------8|                      ...
+|----------4|           |---------12|          ...
+|----2|     |----6|     |---10|     |---14|    ...
+|-1|  |-3|  |-5|  |-7|  |-9|  |11|  |13|  |15| ...
+    </pre>
+    <p>
+      We can then start to work out some more observations to figure out how to
+      properly maintain this data structure for each update and query operation.
+    </p>
+    <p>
+      First, a range stored at index <code>i</code> in the Fenwick tree ends at
+      the original array's index <code>i</code>.
+      The question becomes, where does this range start?
+      Well, remember that we broke up a prefix sum by repeatedly subtracting off
+      ranges with length being the largest power of 2 we could fit.
+      The last range to remain therefore has length being the smallest power of
+      2 in the binary representation of <code>i</code>.
+      If you pull out your book of bit hacks, you'll find that isolating this
+      least significant set bit can be done by <code>i &amp; -i</code>.
+      So, if we clear the least significant bit of <code>i</code> using
+      <code>i := i - (i &amp; -i)</code>, we get the length of our range, which
+      we can use to find the starting index.
+    </p>
+    <p>
+      This gives our method for calculating the prefix sum up to index
+      <code>i</code>: Add the value at index <code>i</code> in the Fenwick tree,
+      clear the least significant set bit of <code>i</code>, and keep repeating
+      until <code>i</code> is 0.
+    </p>
+    <p>
+      Then comes the question of how to update an index <code>i</code>.
+      We know that all ranges ending at an index before <code>i</code> will
+      never contain <code>i</code>.
+      Therefore, the first range we want to update is at index <code>i</code> in
+      the Fenwick tree.
+      Then, if we can always figure out the next smallest index we want to
+      update, we'll be able to enumerate all of the ranges we want to update.
+    </p>
+    <p>
+      Let's consider the range stored at Fenwick tree index <code>i + j</code>.
+      We want to update this range if the length of this range is greater than
+      <code>j</code>.
+      If <code>j</code> is less than the least significant set bit of
+      <code>i</code>, then <code>i + j</code> is equal to <code>i | j</code>,
+      which tells us that the least significant set bit of <code>i + j</code> is
+      at most the least significant set bit of <code>i</code>, which in turn is
+      less than <code>j</code>.
+      So, if <code>j</code> is less than <code>i &amp; -i</code>, the length of
+      the range stored at index <code>i + j</code> is less than <code>j</code>,
+      and we don't want to update this range.
+    </p>
+    <p>
+      Let's consider the next range, <code>j = i &amp; -i</code>`.
+      Then the least significant set bit of <code>i + j</code> is greater than
+      the least significant set bit of <code>i</code>, which is equal to <code>j</code>.
+      Therefore, length of the range stored at index <code>i + (i &amp; -i)</code>
+      is greater than <code>i &amp; -i</code>, so it is a range we want to update.
+      We have found our next smallest index to update, so wen can keep using
+      <code>i := i + (i &amp; -i)</code> to get all the indices we want to update
+      in our Fenwick tree.
+    </p>
+
+    <h2>Segment trees, and an unorthodox indexing scheme</h2>
+    <p>
+      A Segment tree allows for <code>O(log(n))</code> range queries and
+      modifications over an array of size <code>n</code>.
+      They support more operations than standard Fenwick trees; while you could
+      do range sums by subtracting prefix sums, you couldn't do range minimums.
+      The drawback is that segment trees take twice the memory than Fenwick trees.
+    </p>
+    <p>
+      A node in a segment tree stores the sum of the elements in some range.
+      We break this range in two, and assign the left part to the left child,
+      and the right part to the right child.
+      The left and right parts recursively break apart their ranges, until
+      they reach ranges of size 1.
+    </p>
+    <p>
+      To implement updating an element, you find the leaf node for the range
+      containing just this singular element, modify it, then rebuild the ranges
+      going back up to the root.
+      To implement a range query, you sum up the appropriate ranges in the
+      segment tree, which you can find either recursively or iterating from the
+      bottom up.
+      There's better resources on how to do this elsewhere, and the specifics
+      aren't pertinent to the point I'm trying to make, so I'll leave them out.
+      If you're interested in other people's better implementations/explanations
+      of segment trees, there's
+      <a href="https://cp-algorithms.com/data_structures/segment_tree.html">This cp-algorithms article</a>.
+      and
+      <a href="https://codeforces.com/blog/entry/18051">This Codeforces blog</a>
+    </p>
+    <p>
+      Interesting fact: no matter how you break up the ranges, there will always
+      be a total of <code>2 * n - 1</code> nodes in the subtree for a range of
+      length <code>n</code>.
+      We can prove this inductively.
+      Let <code>f(n)</code> be the number of nodes in the subtree for a range of
+      length <code>n</code>.
+      Let <code>f(1) = 1</code> be our base case.
+      Then to show that <code>f(n) = 2 * n - 1</code>, we have to consider all
+      ways to break up this range of length <code>n</code>.
+      That is, we want to show that <code>2 * n - 1 = 1 + f(l) + f(r)</code> for
+      <code>l,r&gt;0</code>, <code>l + r = n</code>.
+      Using strong induction,
+      <code>1 + f(l) + f(r) = 1 + 2 * l - 1 + 2 * r - 1 = 2 * k - 1</code>.
+      Therefore, there always is a total of <code>2 * n - 1</code> nodes in the
+      subtree for a range of length <code>n</code>.
+    </p>
+    <p>
+      We have a few choices to make, which will affect the structure of our
+      segment tree.
+      I could describe the normal choices people make, but the point of this
+      writeup is to talk about why I dislike the name &ldquo;Binary Indexed Tree&rdquo;.
+      Let's do something else and make unorthodox choices.
+    </p>
+    <p>
+      First, notice that the choice of using powers of 2 as our range lengths
+      in a Fenwick tree led to a neat similarity between Fenwick trees of
+      increasing sizes, which we used to derive our indices.
+      Since segment trees require <code>2 * n - 1</code> nodes, we can try to do
+      a similar construction, except we add 2 segment tree nodes each time we
+      increase <code>n</code> by 1.
+    </p>
+    <pre>
+|------------------------------8/9------------------------------|
+|--------------4/5--------------|-------------12/13-------------|
+|------2/3------|------6/7------|-----10/11-----|-----14/15-----|
+|---1---|--2/3--|--4/5--|--6/7--|--8/9--|-10/11-|-12/13-|-14/15-|
+    </pre>
+    <p>
+      That bottom row already is guaranteed one odd number in it, we may as well
+      make them all odd.
+      Let's also take a look at some binary representations of the indices.
+    </p>
+    <pre>
+|--------------------------1000-------------------------|
+|------------0100-----------|------------1100-----------|
+|-----0010----|-----0110----|-----1010----|-----1110----|
+|-0001-|-0011-|-0101-|-0111-|-1001-|-1011-|-1101-|-1111-|
+    </pre>
+    <p>
+      Let's try making some observations about this thing we've just created.
+      First, the least significant set bit of a range's index is its length.
+      Second, if we remove this least significant set bit (and shift the more
+      significant bits down by one), we get the range's starting index.
+      Since we have the range's starting index and its length, we know its end
+      as well.
+    </p>
+    <p>
+      Let's concretely work out the parent/child relations.
+      We can represent index <code>i</code> as a binary string
+      <pre>
+a100000000000
+  '-b times-'
+      </pre>
+      Then the starting index is
+      <pre>
+a00000000000
+ '-b times-'
+      </pre>
+      and the length is
+      <pre>
+100000000000
+ '-b times-'
+      </pre>.
+      The left child shares this starting index, but the length is halved.
+      Therefore, the left child is at index
+      <pre>
+a01000000000
+   '- b-1 -'
+      </pre>
+      To get the right child, we add the half the length of the original index
+      to the starting index, giving
+      <pre>
+a11000000000
+   '- b-1 -'
+      </pre>
+      So, with <code>rmsb = i &amp; -i</code>, the left child is at
+      <code>(i ^ rmsb) | (rmsb &gt;&gt; 1)</code>, and the right child is at
+      <code>i | (irmsb &gt;&gt; 1)</code>.
+    </p>
+    <p>
+      Similar reasoning will give expressions for more tree traversal operations.
+      Getting the parent is <code>(i ^ rmsb) | (rmsb &lt;&lt; 1)</code>.
+      Getting the sibling is <code>(i ^ (rmsb &lt;&lt; 1))</code>.
+      Getting the successive/preceding range is <code>i &pm; (rmsb &lt;&lt; 1)</code>.
+    </p>
+    <p>
+      So,
+      <a href="https://github.com/InverseHackermann/BinaryIndexedSegmentTree">I coded up</a>
+      some C++ templated segment tree code based off of
+      <a href="https://codeforces.com/blog/entry/18051">the Codeforces blog mentioned above</a>,
+      and gave it both the normal indexing/traversal method that the blog entry
+      uses, and my funky binary-indexing-inspired method.
+      I threw a bunch of random data and random range queries at both, and they
+      agreed on all their answers, so I'm pretty confident in my janky hack's
+      correctness.
+    </p>
+    <p>
+      Timing wise, on my machine using <code>n = 10^6</code> and
+      <code>10^7</code> random updates and range queries, the original code took
+      <code>~10.3</code> seconds, while mine took <code>~16.6</code> seconds.
+      I could try to analyze cache efficiency, but that'll probably lead to a
+      discussion that could use its own article.
+    </p>
+    <h2>Conclusion</h2>
+    <p>
+      To summarize, here's a quote from Fenwick's original paper:
+    </p>
+    <blockquote>
+      In recognition of the close relationship between the tree traversal
+      algorithms and the binary representation of an element index, the name
+      &lsquo;binary indexed tree&rsquo; is proposed for the new structure.
+    </blockquote>
+    <p>
+      I have made a segment tree where there is a close relationship between the
+      tree traversal algorithms and the binary representation of an element index.
+      Following the original reasoning behind the name &ldquo;Binary Indexed Tree&rdquo;,
+      we now have two distinct data structures that could fall under this label.
+      Thus, this name cannot unambiguously refer to Fenwick trees.
+      I believe this is a fairly conclusive proof that &ldquo;Binary Indexed Tree&rdquo;
+      is a bad name for Fenwick trees.
+    </p>
+    <p>
+      I'm personally going to call Fenwick trees &ldquo;Prefix-sum trees&rdquo;,
+      since I think that's way more descriptive of their structure and
+      capabilities.
+    </p>
+  </body>
+</html>
