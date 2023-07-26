@@ -62,9 +62,9 @@
       That's why most typical uses of switch statements will come with a
       <code>break</code> at the end of each case &ndash; otherwise, execution
       will fallthrough to the next case.
-      But here, we'll abuse this fallthrough functionality in a style similar to
-      <a href="https://en.wikipedia.org/wiki/Duff%27s_device">Duff's device</a>
-      for jumping back to a saved position.
+      Fallthrough can be abused for some very interesting code, like
+      <a href="https://en.wikipedia.org/wiki/Duff%27s_device">Duff's device</a>.
+      Here, we'll use it for jumping back to a saved position.
     </p>
     <h2>Putting it all together.</h2>
     <p>
