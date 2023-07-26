@@ -67,8 +67,76 @@
       for jumping back to a saved position.
     </p>
     <h2>Putting it all together</h2>
+    <p>
+      There is a fibonacci sequence generator on
+      <a href="https://en.cppreference.com/w/cpp/language/coroutines">cppreference's page on coroutines</a>,
+      so I took that code and re-implemented it using the techniques discussed
+      above.
+    </p>
     <pre>
+#include &lt;iostream&gt;
+#include &lt;functional&gt;
 
+std::function&lt;std::uint64_t*()&gt; fibonacci_sequence(unsigned n) {
+  int ip = 0;
+  std::uint64_t a, b, s;
+  unsigned i;
+  return [=]() mutable -&gt; std::uint64_t* { switch (ip) { case 0:
+    if (n == 0)
+      return nullptr;
+
+    if (n &gt; 94)
+      throw std::runtime_error("Too big Fibonacci sequence. Elements would overflow.");
+
+    ip = 1; return &amp;(s = 0); case 1: ;
+
+    if (n == 1)
+      return nullptr;
+
+    ip = 2; return &amp;(s = 1); case 2: ;
+
+    if (n == 2)
+      return nullptr;
+
+    a = 0;
+    b = 1;
+    for (i = 2; i &lt; n; i++) {
+      s = a + b;
+      ip = 3; return &s; case 3: ;
+      a = b;
+      b = s;
+    }
+    default: return nullptr;
+  }};
+}
+
+int main() {
+  auto gen = fibonacci_sequence(10);
+  for (int j = 0; auto gen_val = gen(); j++) {
+    std::cout &lt;&lt; "fib(" &lt;&lt; j &lt;&lt; ")=" &lt;&lt; *gen_val &lt;&lt; '\n';
+  }
+}
     </pre>
+    <p>
+      And after no complaints during compilation:
+    </p>
+    <pre>
+$ g++ cpp11_yield.cpp -std=gnu++11
+$ ./a
+fib(0)=0
+fib(1)=1
+fib(2)=1
+fib(3)=2
+fib(4)=3
+fib(5)=5
+fib(6)=8
+fib(7)=13
+fib(8)=21
+fib(9)=34
+    </pre>
+    <h2>Recursion?</h2>
+    <p>
+      <a href="https://github.com/InverseHackermann/YieldSudokuSolutions">Yes</a>.
+    </p>
   </body>
 </html>
