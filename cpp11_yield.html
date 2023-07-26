@@ -1,0 +1,74 @@
+<!doctype HTML>
+<html>
+  <head>
+    <title>InverseHackermann - Yield in C++11</title>
+    <meta charset="UTF-8" />
+    <link rel="icon" href="/images/icon16.png" type="image/png" sizes="16x16" />
+    <link rel="icon" href="/images/icon32.png" type="image/png" sizes="32x32" />
+  </head>
+  <body>
+    <div>
+      <a href="index.html">Back to index</a>
+    </div>
+    <h1>
+      Yield in C++11
+    </h1>
+    <h2>
+      A hacky trick you can pull with mutable lambdas and switch statements.
+    </h2>
+    <hr>
+    <p>
+      Python has the <code>yield</code> keyword for making generators.
+      C++23 has <code>std::generator</code>, but at the time I'm writing this,
+      no compilers support it.
+      And even when compilers do start supporting it, we all know how everyone
+      loves to use modern C++ standards...
+    </p>
+    <h2>What do we need for a generator?</h2>
+    <p>
+      What we're looking for in a generator is to be able to yield a value from
+      within a function, suspend execution of the function, and resume it later.
+      This means we need our position in the function and our local variables to
+      remain unchanged between the suspension and resuming of the function.
+    </p>
+    <h2>Lambda function copy captures.</h2>
+    <p>
+      Copy caputures of a lambda function will give us variables that will keep
+      their values as long as the function object is alive, so we can replace
+      all of our local variables with these.
+      In order to be able to modify the values of the copy captures, we need to
+      specify that our lambda is <code>mutable</code>.
+    </p>
+    <p>
+      To differentiate between yielding a value versus the generator finishing,
+      returning an <code>std::optional</code> would probably be the most
+      readable &ndash; the generator either yields a value, or it doesn't.
+      However, <code>std::optional</code> is a feature of C++17, so we can
+      instead hack our way around it with pointers.
+      We can have the variable we want to return as another copy capture so it
+      won't be destroyed, and return a pointer to it.
+      We can return a <code>nullptr</code> to signify that we're done.
+    </p>
+    <p>
+      Finally, we need to be able to save and resume our position in the code.
+      We can have another copy capture be our &ldquo;instruction pointer&rdquo;,
+      but how do we jump back to our saved position upon resuming the generator?
+      We need some sort of multi-way conditional jump...
+    </p>
+    <h2>Switch statement shenanigans.</h2>
+    <p>
+      In C-like languages, <code>case</code> labels are just that: labels, like
+      the kind you see in assembly.
+      That's why most typical uses of switch statements will come with a
+      <code>break</code> at the end of each case &ndash; otherwise, execution
+      will fallthrough to the next case.
+      But here, we'll abuse this fallthrough functionality in a style similar to
+      <a href="https://en.wikipedia.org/wiki/Duff%27s_device">Duff's device</a>
+      for jumping back to a saved position.
+    </p>
+    <h2>Putting it all together</h2>
+    <pre>
+
+    </pre>
+  </body>
+</html>
